@@ -41,8 +41,8 @@ def get_supabase():
         key = st.secrets["supabase"]["key"]
         return create_client(url, key)
     except Exception as e:
-    st.error(f"Error Supabase: {e}")
-    return None
+        st.error(f"Error Supabase: {e}")
+        return None
 
 supabase: Client | None = get_supabase()
 

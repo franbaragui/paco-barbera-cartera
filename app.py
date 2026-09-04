@@ -270,8 +270,7 @@ if not df.empty:
     total_pl_pct = total_pl / total_invested * 100 if total_invested else 0
     day_pl = valid_df["Guany/Pèrdua dia"].sum(min_count=1)
     annual_div = valid_df["Dividend anual estimat"].sum(min_count=1)
-
-       summary_error = None
+    summary_error = None
 
     _, summary_error = save_portfolio_summary(
         total_value,

@@ -271,15 +271,14 @@ if not df.empty:
     day_pl = valid_df["Guany/Pèrdua dia"].sum(min_count=1)
     annual_div = valid_df["Dividend anual estimat"].sum(min_count=1)
 
-        summary_error = None
+       summary_error = None
 
-    if missing_quotes == 0:
-        _, summary_error = save_portfolio_summary(
-            total_value,
-            total_invested,
-            total_pl,
-            annual_div,
-        )
+    _, summary_error = save_portfolio_summary(
+        total_value,
+        total_invested,
+        total_pl,
+        annual_div,
+    )
 
     if summary_error:
         st.warning(

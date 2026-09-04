@@ -205,12 +205,20 @@ df = pd.DataFrame(rows)
 # RESUM
 # ---------------------------
 if not df.empty:
-    total_value = df["Valor actual"].sum(min_count=1)
-    total_invested = df["Invertit"].sum(min_count=1)
+    valid_df = df[df["Valor actual"].notna()].copy()
+    missing_quotes = int(df["Valor actual"].isna().sum())
+
+    total_value = valid_df["Valor actual"].sum(min_count=1)
+    total_invested = valid_df["Invertit"].sum(min_count=1)
     total_pl = total_value - total_invested
     total_pl_pct = total_pl / total_invested * 100 if total_invested else 0
-    day_pl = df["Guany/Pèrdua dia"].sum(min_count=1)
-    annual_div = df["Dividend anual estimat"].sum(min_count=1)
+    day_pl = valid_df["Guany/Pèrdua dia"].sum(min_count=1)
+    annual_div = valid_df["Dividend anual estimat"].sum(min_count=1)
+
+    if missing_quotes:
+        st.warning(
+            f"⚠️ Falten {missing_quotes} cotitzacions. Els totals mostrats són parcials."
+        )
 
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("Valor actual", eur(total_value))

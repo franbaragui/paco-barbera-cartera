@@ -142,6 +142,32 @@ def delete_position(row_id):
     except Exception as e:
         return False, str(e)
 
+def save_portfolio_summary(total_value, total_invested, total_pl, annual_div):
+    if supabase is None:
+        return False, "Supabase no està configurat."
+
+    try:
+        now = datetime.utcnow()
+
+        payload = {
+            "data": now.date().isoformat(),
+            "valor_actual": float(total_value),
+            "invertit": float(total_invested),
+            "resultat": float(total_pl),
+            "dividend_anual": 0.0 if pd.isna(annual_div) else float(annual_div),
+            "updated_at": now.isoformat(),
+        }
+
+        supabase.table("cartera_resum").upsert(
+            payload,
+            on_conflict="data",
+        ).execute()
+
+        return True, None
+
+    except Exception as e:
+        return False, str(e)
+
 # ---------------------------
 # CAPÇALERA
 # ---------------------------
@@ -244,6 +270,21 @@ if not df.empty:
     total_pl_pct = total_pl / total_invested * 100 if total_invested else 0
     day_pl = valid_df["Guany/Pèrdua dia"].sum(min_count=1)
     annual_div = valid_df["Dividend anual estimat"].sum(min_count=1)
+
+        summary_error = None
+
+    if missing_quotes == 0:
+        _, summary_error = save_portfolio_summary(
+            total_value,
+            total_invested,
+            total_pl,
+            annual_div,
+        )
+
+    if summary_error:
+        st.warning(
+            f"No s'ha pogut sincronitzar el resum de la cartera: {summary_error}"
+        )
 
     if missing_quotes:
         st.warning(

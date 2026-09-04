@@ -60,41 +60,42 @@ def pct(value):
 
 @st.cache_data(ttl=300, show_spinner=False)
 def get_quote(ticker: str):
-    """
-    Retorna:
-    current_price, previous_close, day_change, day_change_pct, currency,
-    dividend_rate, dividend_yield
-    """
     try:
         tk = yf.Ticker(ticker)
-        fi = tk.fast_info
+        hist = tk.history(period="1y", auto_adjust=False, actions=True)
 
-        current = fi.get("last_price")
-        previous = fi.get("previous_close")
+        if hist.empty or "Close" not in hist.columns:
+            return None
 
-        if current is None:
-            hist = tk.history(period="5d", auto_adjust=False)
-            if hist.empty:
-                return None
-            current = float(hist["Close"].iloc[-1])
-            previous = float(hist["Close"].iloc[-2]) if len(hist) > 1 else current
+        closes = hist["Close"].dropna()
+        if closes.empty:
+            return None
 
-        change = float(current - previous) if previous else None
+        current = float(closes.iloc[-1])
+        previous = float(closes.iloc[-2]) if len(closes) > 1 else current
+        change = current - previous
         change_pct = (change / previous * 100) if previous else None
 
         dividend_rate = None
-        dividend_yield = None
-        try:
-            info = tk.info
-            dividend_rate = info.get("dividendRate")
-            dividend_yield = info.get("dividendYield")
-            currency = info.get("currency")
-        except Exception:
-            currency = None
+        if "Dividends" in hist.columns:
+            dividends = hist["Dividends"].dropna()
+            if not dividends.empty:
+                dividend_rate = float(dividends.sum())
+                if dividend_rate == 0:
+                    dividend_rate = None
+
+        metadata = getattr(tk, "history_metadata", {}) or {}
+        currency = metadata.get("currency")
+
+        dividend_yield = (
+            dividend_rate / current * 100
+            if dividend_rate is not None and current
+            else None
+        )
 
         return {
-            "current_price": float(current),
-            "previous_close": float(previous) if previous else None,
+            "current_price": current,
+            "previous_close": previous,
             "day_change": change,
             "day_change_pct": change_pct,
             "currency": currency,

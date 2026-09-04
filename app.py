@@ -163,22 +163,51 @@ if supabase is None:
 # CARREGA I COTITZACIONS
 # ---------------------------
 positions = load_positions()
-
+eurusd_quote = get_quote("EURUSD=X")
+eurusd_rate = (
+    eurusd_quote["current_price"]
+    if eurusd_quote and eurusd_quote.get("current_price")
+    else None
+)
 rows = []
 for p in positions:
     q = get_quote(p["ticker"])
     current = q["current_price"] if q else None
     shares = float(p.get("accions") or 0)
     avg_price = float(p.get("preu_mitja") or 0)
+    currency = q.get("currency") if q else None
+    if currency is None:
+        euro_suffixes = (".MC", ".DE", ".MI", ".AS")
+        currency = "EUR" if p["ticker"].endswith(euro_suffixes) else "USD"
 
+    fx_to_eur = 1.0
+    if currency == "USD":
+        fx_to_eur = 1 / eurusd_rate if eurusd_rate else None
+
+    if fx_to_eur is None:
+        current = None
+    else:
+        current = current * fx_to_eur if current is not None else None
+        avg_price = avg_price * fx_to_eur
     invested = shares * avg_price
     current_value = shares * current if current is not None else None
     total_pl = current_value - invested if current_value is not None else None
     total_pl_pct = (total_pl / invested * 100) if invested else None
-    day_pl = shares * q["day_change"] if q and q["day_change"] is not None else None
+    day_pl = (
+        shares * q["day_change"] * fx_to_eur
+        if q and q["day_change"] is not None and fx_to_eur is not None
+        else None
+    )
 
     dividend_rate = q.get("dividend_rate") if q else None
-    annual_dividend = shares * dividend_rate if dividend_rate else None
+    if dividend_rate is not None and fx_to_eur is not None:
+        dividend_rate = dividend_rate * fx_to_eur
+    else:
+        dividend_rate = None
+
+    annual_dividend = (
+        shares * dividend_rate if dividend_rate is not None else None
+    )
 
     rows.append({
         "id": p["id"],
